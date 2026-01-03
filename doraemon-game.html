@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Doraemon 3D Run</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&display=swap');
+
+        :root {
+            --doraemon-blue: #3498db;
+            --gian-orange: #f39c12;
+            --accent-red: #e74c3c;
+            --glass: rgba(255, 255, 255, 0);
+            --glass-border: rgba(255, 255, 255, 0.2);
+        }
+
+        body { 
+            margin: 0; 
+            overflow: hidden; 
+            background-color: #87CEEB; 
+            font-family: 'Outfit', sans-serif;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        /* Top HUD */
+        #ui {
+            position: absolute;
+            top: 30px;
+            left: 30px;
+            color: white;
+            z-index: 10;
+            pointer-events: none;
+        }
+        
+        #ui h1 {
+            margin: 0;
+            font-size: 2.2rem;
+            font-weight: 900;
+            letter-spacing: -1px;
+            text-transform: uppercase;
+            filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3));
+        }
+
+        .credit {
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: var(--gian-orange);
+            background: rgba(0,0,0,0.1);
+            padding: 4px 12px;
+            border-radius: 20px;
+            display: inline-block;
+            margin-top: 5px;
+            backdrop-filter: blur(2px);
+        }
+
+        /* Pause Button - Top Right */
+        #pause-btn {
+            position: absolute;
+            top: 30px;
+            right: 30px;
+            z-index: 60;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid var(--glass-border);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 50px;
+            cursor: pointer;
+            font-weight: 900;
+            text-transform: uppercase;
+            display: none;
+        }
+
+        /* Aesthetic Overlays */
+        .glass-panel {
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            color: white;
+            text-align: center;
+        }
+
+        #overlay, #game-over-overlay, #pause-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 50;
+            transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        #overlay, #pause-overlay { 
+            background: transparent;
+        }
+        
+        #game-over-overlay { 
+            background: transparent; 
+            display: none; 
+            flex-direction: column; 
+        }
+
+        #pause-overlay {
+            display: none;
+            flex-direction: column;
+        }
+
+        .menu-content {
+            padding: 40px 60px;
+            max-width: 400px;
+        }
+
+        .menu-content h2 {
+            font-size: 3.5rem;
+            margin: 0;
+            font-weight: 900;
+            line-height: 1;
+            margin-bottom: 10px;
+            text-shadow: 0 4px 20px rgba(0,0,0,0.5);
+        }
+
+        .pulse-text {
+            animation: pulse 2s infinite;
+            font-weight: 700;
+            color: #fff;
+            opacity: 0.9;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.8);
+        }
+
+        .controls-hint {
+            margin-top: 30px;
+            font-size: 0.8rem;
+            opacity: 0.9;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            text-shadow: 0 2px 5px rgba(0,0,0,0.5);
+        }
+
+        .key-cap {
+            background: white;
+            color: black;
+            padding: 2px 8px;
+            border-radius: 6px;
+            font-weight: 900;
+        }
+
+        /* Action Buttons */
+        .btn-action {
+            margin-top: 15px;
+            padding: 12px 30px;
+            width: 100%;
+            font-size: 1rem;
+            font-weight: 900;
+            color: white;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid var(--glass-border);
+            border-radius: 50px;
+            cursor: pointer;
+            transition: transform 0.2s, background 0.2s;
+            text-transform: uppercase;
+        }
+
+        .btn-action:hover {
+            background: rgba(255,255,255,0.2);
+            transform: scale(1.05);
+        }
+
+        .btn-retry {
+            margin-top: 30px;
+            padding: 16px 40px;
+            font-size: 1.2rem;
+            font-weight: 900;
+            color: white;
+            background: var(--accent-red);
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            text-transform: uppercase;
+            box-shadow: 0 10px 20px rgba(231, 76, 60, 0.4);
+        }
+
+        /* Loading Screen */
+        #loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #0f172a;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            z-index: 100;
+            transition: opacity 0.5s ease;
+        }
+
+        .loader-ring {
+            width: 80px;
+            height: 80px;
+            border: 4px solid rgba(255,255,255,0.1);
+            border-top: 4px solid var(--doraemon-blue);
+            border-radius: 50%;
+            animation: spin 1s cubic-bezier(0.5, 0, 0.5, 1) infinite;
+        }
+
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+
+    </style>
+</head>
+<body>
+
+    <div id="loading-screen">
+        <div class="loader-ring"></div>
+        <div style="margin-top: 20px; font-weight: 700; letter-spacing: 2px; color: var(--doraemon-blue);">LOADING ASSETS</div>
+    </div>
+
+    <button id="pause-btn" onclick="togglePause()">Pause</button>
+
+    <div id="overlay" onclick="startGame()">
+        <div class="glass-panel menu-content">
+            <h2 style="color: var(--doraemon-blue);">RUN!</h2>
+            <div class="pulse-text">Tap to Play</div>
+            <div class="controls-hint">
+                <span><span class="key-cap">A</span> Left</span>
+                <span><span class="key-cap">D</span> Right</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="pause-overlay">
+        <div class="glass-panel menu-content">
+            <h2 style="color: var(--gian-orange);">PAUSED</h2>
+            <button class="btn-action" onclick="togglePause()">Resume</button>
+            <button id="bgm-toggle" class="btn-action" onclick="toggleBGM()">BGM: ON</button>
+            <button class="btn-action" onclick="resetToMenu()">Main Menu</button>
+        </div>
+    </div>
+
+    <div id="game-over-overlay">
+        <div class="glass-panel menu-content">
+            <h2 style="color: var(--accent-red);">BUSTED!</h2>
+            <p style="font-weight: 700; margin-bottom: 0;">Gian caught you!</p>
+            <button class="btn-retry" onclick="resetToMenu()">Main Menu</button>
+        </div>
+    </div>
+
+    <div id="ui">
+        <h1>DORAEMON RUN</h1>
+        <div class="credit">Game by Pragyan</div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/js/loaders/FBXLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/js/libs/fflate.min.js"></script>
+
+    <script>
+        let scene, camera, renderer, clock, mixer, doraemon, mapSegments = [];
+        let runAction, danceAction, deathAction;
+        let isRunning = false;
+        let isPaused = false;
+        let isGameOver = false;
+        let bgm, scream;
+        let isBgmOn = true;
+        
+        const RUN_SPEED = 19;
+        const MAP_SIZE = 57.1; // Length of one map segment
+        const SPAWN_POS = { x: 0, y: 1.5, z: 4 };
+        const GIAN_Y = 3;
+        const GIAN_SCALE = 2.6;
+        const LANE_WIDTH = 4.5;
+        const SPAWN_INTERVAL = 1800; 
+        const FOG_COLOR = 0x87CEEB;
+
+        const MAP_URL = 'https://raw.githubusercontent.com/pragtyan/doraemon/main/doraemon_city.glb';
+        const DORAEMON_URL = 'https://raw.githubusercontent.com/pragtyan/doraemon/main/Fast%20Run.fbx';
+        const DANCE_URL = 'https://raw.githubusercontent.com/pragtyan/doraemon/main/Twist%20Dance.fbx';
+        const DEATH_URL = 'https://raw.githubusercontent.com/pragtyan/doraemon/main/Falling%20Back%20Death.fbx';
+        const GIAN_URL = 'https://raw.githubusercontent.com/pragtyan/doraemon/main/doreamon_gian_character_3d_model_free.glb';
+        const BGM_URL = 'https://raw.githubusercontent.com/pragtyan/doraemon/main/soundcloudaud.com_APH%20-%20Ashita%20Mo%20Tomodachi%20(Doraemon%20Music%20).mp3';
+        const SCREAM_URL = 'https://raw.githubusercontent.com/pragtyan/doraemon/main/086127_ouch-screemwav-80051.mp3';
+
+        let targetX = 0;
+        let obstacles = [];
+        let gianPrototype = null;
+        let lastSpawnTime = 0;
+
+        const loadingScreen = document.getElementById('loading-screen');
+        const overlay = document.getElementById('overlay');
+        const pauseOverlay = document.getElementById('pause-overlay');
+        const gameOverOverlay = document.getElementById('game-over-overlay');
+        const pauseBtn = document.getElementById('pause-btn');
+
+        function init() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(FOG_COLOR);
+            
+            // Fix: Add Linear Fog to hide spawns and snapping
+            scene.fog = new THREE.Fog(FOG_COLOR, 30, 110);
+            
+            // Fix: Camera FOV and Far Plane for occlusion
+            camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 150);
+            camera.position.set(0, 6, 18);
+            camera.lookAt(0, 2, 0);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            renderer.outputEncoding = THREE.sRGBEncoding;
+            renderer.physicallyCorrectLights = true;
+            renderer.toneMapping = THREE.ACESFilmicToneMapping;
+            renderer.toneMappingExposure = 1.2;
+            document.body.appendChild(renderer.domElement);
+
+            clock = new THREE.Clock();
+
+            const ambientLight = new THREE.AmbientLight(0xddeeff, 1.2);
+            scene.add(ambientLight);
+            
+            const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 1.5);
+            hemiLight.position.set(0, 50, 0);
+            scene.add(hemiLight);
+            
+            const dirLight = new THREE.DirectionalLight(0xfff5e1, 2.5);
+            dirLight.position.set(30, 50, 10);
+            dirLight.castShadow = true;
+            dirLight.shadow.mapSize.width = 1024;
+            dirLight.shadow.mapSize.height = 1024;
+            dirLight.shadow.camera.left = -50;
+            dirLight.shadow.camera.right = 50;
+            dirLight.shadow.camera.top = 50;
+            dirLight.shadow.camera.bottom = -50;
+            scene.add(dirLight);
+
+            const listener = new THREE.AudioListener();
+            camera.add(listener);
+            
+            bgm = new THREE.Audio(listener);
+            scream = new THREE.Audio(listener);
+            
+            const audioLoader = new THREE.AudioLoader();
+            audioLoader.load(BGM_URL, (buffer) => {
+                bgm.setBuffer(buffer);
+                bgm.setLoop(true);
+                bgm.setVolume(0.4);
+            });
+            audioLoader.load(SCREAM_URL, (buffer) => {
+                scream.setBuffer(buffer);
+                scream.setLoop(false);
+                scream.setVolume(0.7);
+            });
+
+            loadAssets();
+
+            window.addEventListener('keydown', handleKeyDown);
+            window.addEventListener('resize', onWindowResize, false);
+            animate();
+        }
+
+        function handleKeyDown(event) {
+            if (event.code === 'Escape') togglePause();
+            if (!isRunning || isGameOver || isPaused) return;
+            if (event.code === 'KeyA') {
+                targetX = Math.max(targetX - LANE_WIDTH, -LANE_WIDTH);
+            } else if (event.code === 'KeyD') {
+                targetX = Math.min(targetX + LANE_WIDTH, LANE_WIDTH);
+            }
+        }
+
+        function togglePause() {
+            if (!isRunning || isGameOver) return;
+            isPaused = !isPaused;
+            pauseOverlay.style.display = isPaused ? 'flex' : 'none';
+            if (isPaused) {
+                if (bgm && bgm.isPlaying) bgm.pause();
+            } else {
+                if (isBgmOn && bgm && bgm.buffer) bgm.play();
+            }
+        }
+
+        function toggleBGM() {
+            isBgmOn = !isBgmOn;
+            const btn = document.getElementById('bgm-toggle');
+            btn.innerText = `BGM: ${isBgmOn ? 'ON' : 'OFF'}`;
+            if (!isBgmOn && bgm && bgm.isPlaying) bgm.stop();
+            if (isBgmOn && isPaused === false && bgm && bgm.buffer) bgm.play();
+        }
+
+        function resetToMenu() {
+            isGameOver = false;
+            isRunning = false;
+            isPaused = false;
+            targetX = 0;
+            lastSpawnTime = 0;
+            
+            obstacles.forEach(obs => scene.remove(obs));
+            obstacles = [];
+
+            // Reset Map Segments
+            mapSegments.forEach((seg, idx) => {
+                seg.position.z = -idx * MAP_SIZE;
+            });
+
+            gameOverOverlay.style.display = 'none';
+            pauseOverlay.style.display = 'none';
+            overlay.style.display = 'flex';
+            overlay.style.opacity = '1';
+            pauseBtn.style.display = 'none';
+
+            if (doraemon) {
+                doraemon.position.set(SPAWN_POS.x, SPAWN_POS.y, SPAWN_POS.z);
+                doraemon.rotation.y = 0;
+                if (danceAction) {
+                    mixer.stopAllAction();
+                    danceAction.reset().play();
+                }
+            }
+        }
+
+        async function loadAssets() {
+            const gltfLoader = new THREE.GLTFLoader();
+            const fbxLoader = new THREE.FBXLoader();
+
+            let assetsToLoad = 5;
+            let loadedCount = 0;
+
+            const checkProgress = () => {
+                loadedCount++;
+                if (loadedCount === assetsToLoad) {
+                    loadingScreen.style.opacity = '0';
+                    setTimeout(() => {
+                        loadingScreen.style.display = 'none';
+                        overlay.style.display = 'flex';
+                    }, 500);
+                }
+            };
+
+            gltfLoader.load(MAP_URL, (gltf) => {
+                const protoMap = gltf.scene;
+                protoMap.traverse(n => {
+                    if (n.isMesh) {
+                        n.receiveShadow = true;
+                        if (n.material) {
+                            n.material.roughness = 0.8;
+                            n.material.metalness = 0.1;
+                        }
+                    }
+                });
+
+                // Fix: Create 3 segments for smoother looping
+                for(let i=0; i<3; i++) {
+                    const seg = protoMap.clone();
+                    seg.position.set(0, 0, -i * MAP_SIZE);
+                    scene.add(seg);
+                    mapSegments.push(seg);
+                }
+                checkProgress();
+            });
+
+            gltfLoader.load(GIAN_URL, (gltf) => {
+                gianPrototype = gltf.scene;
+                gianPrototype.traverse(n => {
+                    if (n.isMesh) n.castShadow = true;
+                });
+                checkProgress();
+            });
+
+            fbxLoader.load(DORAEMON_URL, (object) => {
+                doraemon = object;
+                doraemon.scale.set(0.81, 0.81, 0.81); 
+                doraemon.position.set(SPAWN_POS.x, SPAWN_POS.y, SPAWN_POS.z);
+                doraemon.traverse(child => {
+                    if (child.isMesh) {
+                        child.castShadow = true;
+                        child.receiveShadow = true;
+                        if(child.material) {
+                            child.material.side = THREE.DoubleSide;
+                            child.material.roughness = 0.6;
+                        }
+                    }
+                });
+                scene.add(doraemon);
+                mixer = new THREE.AnimationMixer(doraemon);
+                
+                if (object.animations[0]) {
+                    const clip = object.animations[0];
+                    clip.tracks = clip.tracks.filter(track => !track.name.endsWith('.position'));
+                    runAction = mixer.clipAction(clip);
+                }
+
+                fbxLoader.load(DANCE_URL, (danceObj) => {
+                    if (danceObj.animations[0]) {
+                        danceAction = mixer.clipAction(danceObj.animations[0]);
+                        danceAction.play(); 
+                    }
+                    checkProgress();
+                });
+
+                fbxLoader.load(DEATH_URL, (deathObj) => {
+                    if (deathObj.animations[0]) {
+                        const clip = deathObj.animations[0];
+                        clip.tracks = clip.tracks.filter(track => !track.name.endsWith('.position'));
+                        deathAction = mixer.clipAction(clip);
+                        deathAction.setLoop(THREE.LoopOnce);
+                        deathAction.clampWhenFinished = true;
+                    }
+                    checkProgress();
+                });
+                checkProgress();
+            });
+        }
+
+        function startGame() {
+            if (isRunning) return;
+            isRunning = true;
+            overlay.style.opacity = '0';
+            setTimeout(() => {
+                overlay.style.display = 'none';
+                pauseBtn.style.display = 'block';
+            }, 500);
+
+            if (isBgmOn && bgm && bgm.buffer) bgm.play();
+            if (doraemon) doraemon.rotation.y = Math.PI;
+
+            if (danceAction && runAction) {
+                danceAction.fadeOut(0.3);
+                runAction.reset().fadeIn(0.3).play();
+            }
+        }
+
+        function triggerGameOver() {
+            isGameOver = true;
+            isRunning = false;
+            pauseBtn.style.display = 'none';
+            
+            if (bgm) bgm.stop();
+            if (scream && scream.buffer) scream.play(); 
+            
+            if (runAction) runAction.fadeOut(0.2);
+            if (deathAction) {
+                deathAction.reset().fadeIn(0.2).play();
+            }
+
+            setTimeout(() => {
+                gameOverOverlay.style.display = 'flex';
+                gameOverOverlay.style.opacity = '1';
+            }, 1000);
+        }
+
+        function spawnObstacle() {
+            if (!gianPrototype || isGameOver || isPaused) return;
+            const gian = gianPrototype.clone();
+            const lane = Math.floor(Math.random() * 3) - 1; 
+            gian.scale.set(GIAN_SCALE, GIAN_SCALE, GIAN_SCALE);
+            // Fix: Spawn distance increased and within fog range (100 is start of occlusion)
+            gian.position.set(lane * LANE_WIDTH, GIAN_Y, -90); 
+            scene.add(gian);
+            obstacles.push(gian);
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const delta = clock.getDelta();
+            const time = performance.now();
+
+            if (mixer && !isPaused) mixer.update(delta);
+
+            if (isRunning && !isGameOver && !isPaused) {
+                const moveDist = RUN_SPEED * delta;
+                
+                // Fix: Smoother Infinite Map Looping logic
+                mapSegments.forEach(seg => {
+                    seg.position.z += moveDist;
+                    // If a segment passes behind the camera, move it to the far end
+                    if (seg.position.z > MAP_SIZE) {
+                        // Calculate furthest segment position to snap to
+                        let furthestZ = 0;
+                        mapSegments.forEach(s => { if(s.position.z < furthestZ) furthestZ = s.position.z; });
+                        seg.position.z = furthestZ - MAP_SIZE + 0.1; // Small overlap to avoid seam
+                    }
+                });
+
+                if (time - lastSpawnTime > SPAWN_INTERVAL) {
+                    spawnObstacle();
+                    lastSpawnTime = time;
+                }
+
+                for (let i = obstacles.length - 1; i >= 0; i--) {
+                    const obs = obstacles[i];
+                    obs.position.z += RUN_SPEED * delta;
+
+                    if (doraemon) {
+                        const dx = Math.abs(doraemon.position.x - obs.position.x);
+                        const dz = Math.abs(doraemon.position.z - obs.position.z);
+                        if (dx < 2.5 && dz < 2.0) {
+                            triggerGameOver();
+                            break;
+                        }
+                    }
+
+                    if (obs.position.z > 20) {
+                        scene.remove(obs);
+                        obstacles.splice(i, 1);
+                    }
+                }
+
+                if (doraemon) {
+                    doraemon.position.x += (targetX - doraemon.position.x) * 0.15;
+                    doraemon.position.z = SPAWN_POS.z;
+                }
+            }
+            
+            camera.lookAt(0, 3, 0);
+            renderer.render(scene, camera);
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>
