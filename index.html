@@ -1,0 +1,1012 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Doraemon 3D Run</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&display=swap');
+
+        :root {
+            --doraemon-blue: #00a1ff;
+            --gian-orange: #ff9f43;
+            --accent-red: #ff4757;
+            --dorayaki-gold: #ffc107;
+            --glass: rgba(255, 255, 255, 0.05);
+            --glass-border: rgba(255, 255, 255, 0.2);
+        }
+
+        * {
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            box-sizing: border-box;
+        }
+
+        body { 
+            margin: 0; 
+            overflow: hidden; 
+            background: #0f172a;
+            font-family: 'Outfit', sans-serif;
+            -webkit-user-select: none;
+            user-select: none;
+            touch-action: none;
+        }
+
+        /* UI Layer */
+        #ui {
+            position: absolute;
+            top: env(safe-area-inset-top, 20px);
+            left: 20px;
+            color: white;
+            z-index: 10;
+            pointer-events: none;
+        }
+        
+        #ui h1 {
+            margin: 0;
+            font-size: 1.8rem;
+            font-weight: 900;
+            letter-spacing: -1px;
+            text-transform: uppercase;
+            filter: drop-shadow(0 4px 8px rgba(0,0,0,0.2));
+            background: linear-gradient(to right, #fff, #c3eaff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .credit {
+            font-size: 0.65rem;
+            font-weight: 700;
+            color: rgba(255, 255, 255, 0.9);
+            background: rgba(0,0,0,0.3);
+            padding: 4px 12px;
+            border-radius: 50px;
+            display: inline-block;
+            margin-top: 4px;
+            border: 1px solid rgba(255,255,255,0.1);
+            backdrop-filter: blur(4px);
+        }
+
+        #stats-panel {
+            position: absolute;
+            top: env(safe-area-inset-top, 20px);
+            right: 20px;
+            text-align: right;
+            color: white;
+            z-index: 10;
+            pointer-events: none;
+            display: none;
+        }
+
+        .stat-item {
+            background: rgba(15, 23, 42, 0.7);
+            padding: 8px 18px;
+            border-radius: 16px;
+            margin-bottom: 8px;
+            border: 1px solid var(--glass-border);
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+
+        .stat-label { font-weight: 700; font-size: 0.65rem; text-transform: uppercase; opacity: 0.8; letter-spacing: 0.5px;}
+        .stat-value { font-weight: 900; font-size: 1.3rem; font-variant-numeric: tabular-nums;}
+        
+        .doracake-icon-img { 
+            width: 26px; 
+            height: 26px; 
+            object-fit: contain; 
+            border-radius: 50%;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+        }
+
+        #game-controls {
+            position: absolute;
+            bottom: max(30px, env(safe-area-inset-bottom));
+            right: 20px;
+            z-index: 60;
+            display: none;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .btn-ui {
+            background: rgba(255,255,255,0.15);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-border);
+            color: white;
+            padding: 14px 32px;
+            border-radius: 50px;
+            cursor: pointer;
+            font-weight: 800;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+            transition: transform 0.1s, background 0.2s;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .btn-ui:active { transform: scale(0.95); background: rgba(255,255,255,0.25); }
+
+        /* Modern Glass Panel */
+        .glass-panel {
+            background: rgba(11, 19, 36, 0.92);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 24px;
+            color: white;
+            text-align: center;
+            box-shadow: 0 25px 60px -12px rgba(0, 0, 0, 0.6);
+            overflow-y: auto;
+            max-height: 90vh;
+        }
+
+        #overlay, #game-over-overlay, #pause-overlay, #shop-overlay, #use-gadget-overlay, #username-overlay, #leaderboard-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 50;
+            padding: 20px;
+            box-sizing: border-box;
+            background: rgba(0,0,0,0.2); /* Slight dimming for better contrast */
+            backdrop-filter: blur(2px);
+            transition: opacity 0.3s ease;
+        }
+
+        #game-over-overlay, #pause-overlay, #shop-overlay, #use-gadget-overlay, #username-overlay, #leaderboard-overlay { display: none; }
+
+        .menu-content { padding: 35px; width: 100%; max-width: 420px; }
+        .menu-content h2 { font-size: 2.4rem; margin-bottom: 20px; font-weight: 900; letter-spacing: -1px; }
+
+        .btn-action {
+            margin-top: 12px;
+            padding: 16px 24px;
+            width: 100%;
+            font-size: 1.1rem;
+            font-weight: 800;
+            color: white;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 16px;
+            cursor: pointer;
+            text-transform: uppercase;
+            transition: all 0.2s;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .btn-action:hover { background: rgba(255,255,255,0.15); transform: translateY(-2px); }
+        .btn-action:active { transform: scale(0.98); }
+
+        .shop-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 25px 0; }
+        .shop-item {
+            background: rgba(255,255,255,0.03);
+            padding: 15px;
+            border-radius: 16px;
+            border: 1px solid rgba(255,255,255,0.08);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+        .shop-item:active { transform: scale(0.96); }
+        .shop-item.owned { opacity: 0.6; border-color: #4cd137; background: rgba(76, 209, 55, 0.1); }
+        
+        .item-icon { 
+            width: 48px; 
+            height: 48px; 
+            object-fit: cover; 
+            margin-bottom: 10px; 
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        }
+        .item-name { font-weight: 700; font-size: 0.85rem; color: #fff; margin: 4px 0; }
+        .item-cost { font-weight: 900; font-size: 0.75rem; color: var(--dorayaki-gold); }
+
+        #flash-effect {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: white; z-index: 1000; opacity: 0; pointer-events: none;
+            transition: opacity 0.4s ease-out;
+        }
+
+        #loading-screen {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: #0f172a; display: flex; flex-direction: column;
+            justify-content: center; align-items: center; color: white; z-index: 100;
+            transition: opacity 0.5s ease;
+        }
+        .loader-ring {
+            width: 50px; height: 50px; border: 4px solid rgba(255,255,255,0.1);
+            border-top: 4px solid var(--doraemon-blue); border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+
+        .swipe-hint {
+            position: absolute;
+            bottom: 140px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: rgba(255,255,255,0.7);
+            font-size: 0.8rem;
+            font-weight: 700;
+            pointer-events: none;
+            display: none;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+            animation: bounce 2s infinite;
+        }
+        @keyframes bounce {
+            0%, 100% { transform: translate(-50%, 0); }
+            50% { transform: translate(-50%, -10px); }
+        }
+        @media (max-width: 768px) {
+            .swipe-hint { display: block; }
+        }
+
+        #username-input, #password-input {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 12px;
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.2);
+            background: rgba(255,255,255,0.05);
+            color: white;
+            font-size: 1rem;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="flash-effect"></div>
+
+    <div id="loading-screen">
+        <div class="loader-ring"></div>
+        <div style="margin-top: 20px; font-weight: 700; font-size: 0.9rem; letter-spacing: 1px;">LOADING WORLD...</div>
+    </div>
+
+    <div id="stats-panel">
+        <div class="stat-item">
+            <span class="stat-label">Dist</span>
+            <span id="score-val" class="stat-value">0</span>
+        </div>
+        <div class="stat-item" id="coin-container">
+            <img class="doracake-icon-img" src="https://raw.githubusercontent.com/pragtyan/doraemon/main/doracake.jpg" alt="Doracake">
+            <span id="coin-val" class="stat-value">0</span>
+        </div>
+    </div>
+
+    <div class="swipe-hint" id="swipe-hint">Swipe to Move & Jump</div>
+
+    <div id="game-controls">
+        <button class="btn-ui" id="btn-pause" onclick="togglePause()">Pause</button>
+        <button class="btn-ui" id="btn-use-gadget" onclick="openUseGadget()">Gadget</button>
+    </div>
+
+    <div id="overlay">
+        <div class="glass-panel menu-content">
+            <h2 style="color: var(--doraemon-blue);">DORAEMON<br>RUN</h2>
+            <button class="btn-action" style="background: var(--doraemon-blue);" onclick="startGame()">Play</button>
+            <button class="btn-action" onclick="openShop()">Gadget Shop</button>
+            <button class="btn-action" onclick="showLeaderboard()">Leaderboard</button>
+        </div>
+    </div>
+
+    <div id="shop-overlay">
+        <div class="glass-panel menu-content">
+            <h2 style="color: var(--dorayaki-gold);">SHOP</h2>
+            <p style="margin-bottom: 10px; font-weight: 600;">Balance: <span id="shop-balance">0</span> 🍩</p>
+            <div class="shop-grid">
+                <div class="shop-item" id="item-biglight" onclick="buyGadget('biglight', 10)">
+                    <img class="item-icon" src="https://raw.githubusercontent.com/pragtyan/doraemon/main/big%20light.jpg" alt="Big Light">
+                    <span class="item-name">Big Light</span>
+                    <span class="item-cost" id="cost-biglight">10</span>
+                </div>
+                <div class="shop-item" id="item-smalllight" onclick="buyGadget('smalllight', 15)">
+                    <img class="item-icon" src="https://raw.githubusercontent.com/pragtyan/doraemon/main/small%20light.jpg" alt="Small Light">
+                    <span class="item-name">Small Light</span>
+                    <span class="item-cost" id="cost-smalllight">15</span>
+                </div>
+                <div class="shop-item" id="item-bamboocopter" onclick="buyGadget('bamboocopter', 25)">
+                    <img class="item-icon" src="https://raw.githubusercontent.com/pragtyan/doraemon/main/bamboocopter.png" alt="Bamboo Copter">
+                    <span class="item-name">Bamboo Copter</span>
+                    <span class="item-cost" id="cost-bamboocopter">25</span>
+                </div>
+                <div class="shop-item" id="item-dictatorswitch" onclick="buyGadget('dictatorswitch', 50)">
+                    <img class="item-icon" src="https://raw.githubusercontent.com/pragtyan/doraemon/main/dictator%20switch.jpg" alt="Switch">
+                    <span class="item-name">Dictator Sw.</span>
+                    <span class="item-cost" id="cost-dictatorswitch">50</span>
+                </div>
+            </div>
+            <button class="btn-action" onclick="closeShop()">Back</button>
+        </div>
+    </div>
+
+    <div id="use-gadget-overlay">
+        <div class="glass-panel menu-content">
+            <h2 style="color: var(--doraemon-blue);">INVENTORY</h2>
+            <div id="owned-gadgets-list" class="shop-grid"></div>
+            <button class="btn-action" onclick="closeUseGadget()">Cancel</button>
+        </div>
+    </div>
+
+    <div id="pause-overlay">
+        <div class="glass-panel menu-content">
+            <h2 style="color: var(--gian-orange);">PAUSED</h2>
+            <button class="btn-action" onclick="togglePause()">Resume</button>
+            <button class="btn-action" style="background: rgba(255, 71, 87, 0.2); border-color: rgba(255, 71, 87, 0.4); color: #ff4757;" onclick="resetToMenu()">Quit Run</button>
+        </div>
+    </div>
+
+    <div id="game-over-overlay">
+        <div class="glass-panel menu-content">
+            <h2 style="color: var(--accent-red);">BUSTED!</h2>
+            <p id="final-stats" style="font-size: 1.1rem; opacity: 0.9; margin: 15px 0;"></p>
+            <button class="btn-action" style="background: var(--accent-red);" onclick="resetToMenu()">Back to Menu</button>
+        </div>
+    </div>
+
+    <div id="username-overlay">
+        <div class="glass-panel menu-content">
+            <h2 style="color: var(--doraemon-blue);">Login / Register</h2>
+            <input type="text" id="username-input" placeholder="Enter your username">
+            <input type="password" id="password-input" placeholder="Enter your password">
+            <button class="btn-action" style="background: var(--doraemon-blue);" onclick="loginOrRegister()">Submit</button>
+        </div>
+    </div>
+
+    <div id="leaderboard-overlay">
+        <div class="glass-panel menu-content">
+            <h2 style="color: var(--dorayaki-gold);">Leaderboard</h2>
+            <div id="leaderboard-list" style="margin: 20px 0; text-align: left;"></div>
+            <button class="btn-action" onclick="closeLeaderboard()">Back</button>
+        </div>
+    </div>
+
+    <div id="ui">
+        <h1>DORAEMON</h1>
+        <div class="credit">By Pragyan Koirala</div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/js/loaders/FBXLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/js/libs/fflate.min.js"></script>
+
+    <script>
+        let scene, camera, renderer, clock, mixer, doraemon, mapSegments = [];
+        let runAction, danceAction, deathAction, flyAction;
+        let isRunning = false, isPaused = false, isGameOver = false;
+        let bgm, scream;
+        let score = 0, totalDoracakes = 0;
+        
+        let ownedGadgets = [];
+        let isBig = false, isSmall = false, isFlying = false, isDictatorMode = false;
+        let currentSpeedMultiplier = 1.0, progressionMultiplier = 1.0; 
+        let tinyYPos = 1.4;
+
+        let verticalVelocity = 0, isJumping = false;
+        const GRAVITY = -45, JUMP_FORCE = 18;
+        let cameraShakeIntensity = 0;
+        const baseCamPos = new THREE.Vector3(0, 6.5, 18);
+
+        const BASE_RUN_SPEED = 21, MAP_SIZE = 57.1;
+        const SPAWN_POS = { x: 0, y: 1.5, z: 4 }, LANE_WIDTH = 4.5;
+        
+        const MAP_URL = 'https://raw.githubusercontent.com/pragtyan/doraemon/main/doraemon_city.glb';
+        const DORAEMON_URL = 'https://raw.githubusercontent.com/pragtyan/doraemon/main/Fast%20Run.fbx';
+        const DANCE_URL = 'https://raw.githubusercontent.com/pragtyan/doraemon/main/Twist%20Dance.fbx';
+        const DEATH_URL = 'https://raw.githubusercontent.com/pragtyan/doraemon/main/Falling%20Back%20Death.fbx';
+        const FLY_URL = 'https://raw.githubusercontent.com/pragtyan/doraemon/main/Flying.fbx';
+        const GIAN_URL = 'https://raw.githubusercontent.com/pragtyan/doraemon/main/doreamon_gian_character_3d_model_free.glb';
+        const NOBITA_URL = 'https://raw.githubusercontent.com/pragtyan/doraemon/main/nobita_from_doraemon.glb';
+        const BGM_URL = 'https://raw.githubusercontent.com/pragtyan/doraemon/main/soundcloudaud.com_APH%20-%20Ashita%20Mo%20Tomodachi%20(Doraemon%20Music%20).mp3';
+        const SCREAM_URL = 'https://raw.githubusercontent.com/pragtyan/doraemon/main/086127_ouch-screemwav-80051.mp3';
+
+        let targetX = 0, obstacles = [], coins = [], gianPrototype = null, nobitaPrototype = null;
+        let lastSpawnTime = 0, lastCoinSpawnTime = 0;
+
+        let touchStartX = 0, touchStartY = 0;
+        const SWIPE_THRESHOLD = 30;
+
+        const STORAGE_KEY = 'doraemon_run_data';
+        let gameData = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
+        let currentUsername = '';
+        let highScore = 0;
+
+        function init() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x64b5f6);
+            scene.fog = new THREE.Fog(0x64b5f6, 40, 110);
+            
+            camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 200);
+            camera.position.copy(baseCamPos);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2.0)); // Optimize for high DPI
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            renderer.outputEncoding = THREE.sRGBEncoding;
+            renderer.toneMapping = THREE.ACESFilmicToneMapping;
+            renderer.toneMappingExposure = 1.1; // Balanced exposure
+            document.body.appendChild(renderer.domElement);
+
+            clock = new THREE.Clock();
+
+            // Refined Lighting
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            scene.add(ambientLight);
+            
+            const sun = new THREE.DirectionalLight(0xfff5d5, 1.5);
+            sun.position.set(20, 60, 20);
+            sun.castShadow = true;
+            sun.shadow.mapSize.width = 2048;
+            sun.shadow.mapSize.height = 2048;
+            sun.shadow.camera.near = 0.5;
+            sun.shadow.camera.far = 150;
+            sun.shadow.bias = -0.0001;
+            scene.add(sun);
+
+            const fillLight = new THREE.HemisphereLight(0x87CEEB, 0x444444, 0.5);
+            scene.add(fillLight);
+
+            const listener = new THREE.AudioListener();
+            camera.add(listener);
+            bgm = new THREE.Audio(listener);
+            scream = new THREE.Audio(listener);
+            
+            new THREE.AudioLoader().load(BGM_URL, (b) => { bgm.setBuffer(b); bgm.setLoop(true); bgm.setVolume(0.4); });
+            new THREE.AudioLoader().load(SCREAM_URL, (b) => { scream.setBuffer(b); scream.setVolume(0.7); });
+
+            loadAssets();
+            
+            window.addEventListener('keydown', handleKeyDown);
+            window.addEventListener('resize', onWindowResize);
+            
+            window.addEventListener('touchstart', (e) => {
+                touchStartX = e.touches[0].clientX;
+                touchStartY = e.touches[0].clientY;
+            }, { passive: false });
+
+            window.addEventListener('touchend', (e) => {
+                const touchEndX = e.changedTouches[0].clientX;
+                const touchEndY = e.changedTouches[0].clientY;
+                handleSwipe(touchStartX, touchStartY, touchEndX, touchEndY);
+            }, { passive: false });
+
+            animate();
+        }
+
+        function handleSwipe(startX, startY, endX, endY) {
+            if (!isRunning || isGameOver || isPaused) return;
+            const diffX = endX - startX;
+            const diffY = endY - startY;
+            if (Math.abs(diffX) > Math.abs(diffY)) {
+                if (Math.abs(diffX) > SWIPE_THRESHOLD) {
+                    if (diffX > 0) targetX = Math.min(targetX + LANE_WIDTH, LANE_WIDTH);
+                    else targetX = Math.max(targetX - LANE_WIDTH, -LANE_WIDTH);
+                }
+            } else {
+                if (diffY < -SWIPE_THRESHOLD && !isJumping && !isFlying) {
+                    isJumping = true;
+                    verticalVelocity = JUMP_FORCE;
+                    document.getElementById('swipe-hint').style.display = 'none';
+                }
+            }
+        }
+
+        function stripRootMotion(clip) {
+            if (!clip) return;
+            clip.tracks = clip.tracks.filter(track => {
+                return !(track.name.endsWith('.position') && (track.name.includes('root') || track.name.includes('mixamorig')));
+            });
+            return clip;
+        }
+
+        function loginOrRegister() {
+            let username = document.getElementById('username-input').value.trim();
+            let password = document.getElementById('password-input').value.trim();
+            if (username && password) {
+                if (gameData[username]) {
+                    if (gameData[username].password === password) {
+                        currentUsername = username;
+                        loadUserData();
+                        document.getElementById('username-overlay').style.display = 'none';
+                        document.getElementById('overlay').style.display = 'flex';
+                    } else {
+                        alert('Wrong password');
+                    }
+                } else {
+                    // Register new user
+                    currentUsername = username;
+                    gameData[username] = {
+                        password: password,
+                        doracakes: 0,
+                        gadgets: [],
+                        highScore: 0
+                    };
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(gameData));
+                    loadUserData();
+                    document.getElementById('username-overlay').style.display = 'none';
+                    document.getElementById('overlay').style.display = 'flex';
+                }
+            } else {
+                alert('Please enter both username and password');
+            }
+        }
+
+        function loadUserData() {
+            if (gameData[currentUsername]) {
+                totalDoracakes = gameData[currentUsername].doracakes || 0;
+                ownedGadgets = gameData[currentUsername].gadgets || [];
+                highScore = gameData[currentUsername].highScore || 0;
+            } else {
+                totalDoracakes = 0;
+                ownedGadgets = [];
+                highScore = 0;
+            }
+            updateStatsUI();
+        }
+
+        function saveUserData() {
+            if (!currentUsername) return;
+            gameData[currentUsername] = {
+                ...gameData[currentUsername],
+                doracakes: totalDoracakes,
+                gadgets: ownedGadgets,
+                highScore: Math.max(highScore, Math.floor(score))
+            };
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(gameData));
+        }
+
+        function buyGadget(id, cost) {
+            if (totalDoracakes >= cost && !ownedGadgets.includes(id)) {
+                totalDoracakes -= cost;
+                ownedGadgets.push(id);
+                updateStatsUI();
+                document.getElementById(`item-${id}`).classList.add('owned');
+                document.getElementById(`cost-${id}`).innerText = "OWNED";
+                saveUserData();
+            }
+        }
+
+        function updateStatsUI() {
+            document.getElementById('coin-val').innerText = totalDoracakes;
+            document.getElementById('shop-balance').innerText = totalDoracakes;
+        }
+
+        function openShop() {
+            document.getElementById('overlay').style.display = 'none';
+            document.getElementById('shop-overlay').style.display = 'flex';
+            document.getElementById('shop-balance').innerText = totalDoracakes;
+        }
+
+        function closeShop() {
+            document.getElementById('shop-overlay').style.display = 'none';
+            document.getElementById('overlay').style.display = 'flex';
+        }
+
+        function showLeaderboard() {
+            document.getElementById('overlay').style.display = 'none';
+            document.getElementById('leaderboard-overlay').style.display = 'flex';
+            let list = document.getElementById('leaderboard-list');
+            list.innerHTML = '';
+            let scores = Object.entries(gameData).map(([user, data]) => ({user, score: data.highScore || 0}))
+                .sort((a, b) => b.score - a.score)
+                .slice(0, 10);
+            if (scores.length === 0) {
+                list.innerHTML = '<p style="opacity: 0.6;">No scores yet.</p>';
+            } else {
+                scores.forEach((entry, i) => {
+                    list.innerHTML += `<p>${i + 1}. ${entry.user}: ${entry.score}</p>`;
+                });
+            }
+        }
+
+        function closeLeaderboard() {
+            document.getElementById('leaderboard-overlay').style.display = 'none';
+            document.getElementById('overlay').style.display = 'flex';
+        }
+
+        function openUseGadget() {
+            if(isBig || isSmall || isFlying || isDictatorMode) return; 
+            isPaused = true;
+            const list = document.getElementById('owned-gadgets-list');
+            list.innerHTML = "";
+            if (ownedGadgets.length === 0) {
+                list.innerHTML = "<p style='grid-column: 1/3; opacity: 0.6;'>No gadgets in inventory.</p>";
+            } else {
+                ownedGadgets.forEach(id => {
+                    const gadgetMap = {
+                        'biglight': { icon: 'https://raw.githubusercontent.com/pragtyan/doraemon/main/big%20light.jpg', name: 'Big Light' },
+                        'smalllight': { icon: 'https://raw.githubusercontent.com/pragtyan/doraemon/main/small%20light.jpg', name: 'Small Light' },
+                        'bamboocopter': { icon: 'https://raw.githubusercontent.com/pragtyan/doraemon/main/bamboocopter.png', name: 'Bamboo Copter' },
+                        'dictatorswitch': { icon: 'https://raw.githubusercontent.com/pragtyan/doraemon/main/dictator%20switch.jpg', name: 'Dictator Switch' }
+                    };
+                    const g = gadgetMap[id];
+                    let clickFunc = "";
+                    if(id === 'biglight') clickFunc = 'useBigLight()';
+                    else if(id === 'smalllight') clickFunc = 'useSmallLight()';
+                    else if(id === 'dictatorswitch') clickFunc = 'useDictatorSwitch()';
+                    else clickFunc = 'useBambooCopter()';
+                    
+                    list.innerHTML += `
+                        <div class="shop-item" onclick="${clickFunc}">
+                            <img class="item-icon" src="${g.icon}" alt="${g.name}">
+                            <span class="item-name">${g.name}</span>
+                            <span class="item-cost" style="color: #4cd137;">USE</span>
+                        </div>`;
+                });
+            }
+            document.getElementById('use-gadget-overlay').style.display = 'flex';
+        }
+
+        function closeUseGadget() {
+            document.getElementById('use-gadget-overlay').style.display = 'none';
+            isPaused = false;
+        }
+
+        function consumeGadget(id) {
+            ownedGadgets = ownedGadgets.filter(gid => gid !== id);
+            const shopItem = document.getElementById(`item-${id}`);
+            const costLabel = document.getElementById(`cost-${id}`);
+            if(shopItem) shopItem.classList.remove('owned');
+            if(costLabel) {
+                const costs = { 'biglight': 10, 'smalllight': 15, 'bamboocopter': 25, 'dictatorswitch': 50 };
+                costLabel.innerText = costs[id];
+            }
+            saveUserData();
+        }
+
+        function triggerFlash() {
+            const flash = document.getElementById('flash-effect');
+            flash.style.opacity = '1';
+            setTimeout(() => { flash.style.opacity = '0'; }, 600);
+        }
+
+        function useBigLight() {
+            consumeGadget('biglight'); closeUseGadget(); triggerFlash();
+            setTimeout(() => {
+                isBig = true;
+                doraemon.scale.set(2.5, 2.5, 2.5);
+                doraemon.position.y = 4.0;
+                setTimeout(() => {
+                    triggerFlash();
+                    isBig = false;
+                    doraemon.scale.set(0.81, 0.81, 0.81);
+                    doraemon.position.y = SPAWN_POS.y;
+                }, 7000);
+            }, 100);
+        }
+
+        function useSmallLight() {
+            consumeGadget('smalllight'); closeUseGadget(); triggerFlash();
+            setTimeout(() => {
+                isSmall = true;
+                doraemon.scale.set(0.3, 0.3, 0.3);
+                doraemon.position.y = tinyYPos;
+                currentSpeedMultiplier = 1.8;
+                setTimeout(() => {
+                    triggerFlash();
+                    isSmall = false;
+                    doraemon.scale.set(0.81, 0.81, 0.81);
+                    doraemon.position.y = SPAWN_POS.y;
+                    currentSpeedMultiplier = 1.0;
+                }, 7000);
+            }, 100);
+        }
+
+        function useBambooCopter() {
+            consumeGadget('bamboocopter'); closeUseGadget(); triggerFlash();
+            setTimeout(() => {
+                isFlying = true;
+                runAction.fadeOut(0.3);
+                flyAction.reset().fadeIn(0.3).play();
+                doraemon.position.y = 8.0;
+                currentSpeedMultiplier = 1.4;
+                setTimeout(() => {
+                    triggerFlash();
+                    isFlying = false;
+                    flyAction.fadeOut(0.3);
+                    runAction.reset().fadeIn(0.3).play();
+                    doraemon.position.y = SPAWN_POS.y;
+                    currentSpeedMultiplier = 1.0;
+                }, 7000);
+            }, 100);
+        }
+
+        function useDictatorSwitch() {
+            consumeGadget('dictatorswitch'); closeUseGadget(); triggerFlash();
+            setTimeout(() => {
+                isDictatorMode = true;
+                obstacles.forEach(o => scene.remove(o));
+                obstacles = [];
+                scene.background = new THREE.Color(0x30336b);
+                scene.fog.color = new THREE.Color(0x30336b);
+                setTimeout(() => {
+                    triggerFlash();
+                    isDictatorMode = false;
+                    scene.background = new THREE.Color(0x64b5f6);
+                    scene.fog.color = new THREE.Color(0x64b5f6);
+                }, 7000);
+            }, 100);
+        }
+
+        function startGame() {
+            isRunning = true;
+            progressionMultiplier = 1.0;
+            document.getElementById('overlay').style.display = 'none';
+            document.getElementById('game-controls').style.display = 'flex';
+            document.getElementById('stats-panel').style.display = 'block';
+            if (bgm.buffer) bgm.play();
+            doraemon.rotation.y = Math.PI;
+            danceAction.fadeOut(0.3);
+            runAction.reset().fadeIn(0.3).play();
+        }
+
+        function resetToMenu() {
+            saveUserData();
+            isGameOver = false; isRunning = false; isPaused = false;
+            targetX = 0; score = 0; isBig = false; isSmall = false; isFlying = false; isDictatorMode = false;
+            isJumping = false; verticalVelocity = 0;
+            currentSpeedMultiplier = 1.0;
+            progressionMultiplier = 1.0;
+            document.getElementById('score-val').innerText = "0";
+            obstacles.forEach(o => scene.remove(o)); obstacles = [];
+            coins.forEach(c => scene.remove(c)); coins = [];
+            mapSegments.forEach((s, i) => s.position.z = -i * MAP_SIZE);
+            document.getElementById('game-over-overlay').style.display = 'none';
+            document.getElementById('pause-overlay').style.display = 'none';
+            document.getElementById('overlay').style.display = 'flex';
+            document.getElementById('game-controls').style.display = 'none';
+            document.getElementById('stats-panel').style.display = 'none';
+            scene.background = new THREE.Color(0x64b5f6);
+            scene.fog.color = new THREE.Color(0x64b5f6);
+            doraemon.position.set(SPAWN_POS.x, SPAWN_POS.y, SPAWN_POS.z);
+            doraemon.scale.set(0.81, 0.81, 0.81);
+            doraemon.rotation.y = 0;
+            mixer.stopAllAction();
+            danceAction.reset().play();
+            camera.position.copy(baseCamPos);
+            cameraShakeIntensity = 0;
+        }
+
+        function triggerGameOver() {
+            if (isBig || isSmall || isFlying || isDictatorMode) return; 
+            isGameOver = true; isRunning = false;
+            document.getElementById('game-controls').style.display = 'none';
+            if (bgm.isPlaying) bgm.stop();
+            if (scream.buffer) scream.play();
+            runAction.fadeOut(0.2);
+            deathAction.reset().setLoop(THREE.LoopOnce).fadeIn(0.2).play();
+            deathAction.clampWhenFinished = true;
+            highScore = Math.max(highScore, Math.floor(score));
+            document.getElementById('final-stats').innerText = `Dist: ${Math.floor(score)}m | Cakes: ${totalDoracakes} | High: ${highScore}`;
+            saveUserData();
+            setTimeout(() => document.getElementById('game-over-overlay').style.display = 'flex', 1000);
+        }
+
+        function togglePause() {
+            if (!isRunning || isGameOver) return;
+            isPaused = !isPaused;
+            document.getElementById('pause-overlay').style.display = isPaused ? 'flex' : 'none';
+            if (isPaused) bgm.pause(); else if(bgm.buffer) bgm.play();
+        }
+
+        async function loadAssets() {
+            const gltfLoader = new THREE.GLTFLoader();
+            const fbxLoader = new THREE.FBXLoader();
+            let count = 0;
+            const done = () => { 
+                if(++count === 7) { 
+                    document.getElementById('loading-screen').style.display = 'none'; 
+                    document.getElementById('username-overlay').style.display = 'flex'; 
+                } 
+            };
+
+            gltfLoader.load(MAP_URL, (gltf) => {
+                for(let i=0; i<3; i++) {
+                    const seg = gltf.scene.clone();
+                    // Better Material Settings for Polish
+                    seg.traverse(n => {
+                        if (n.isMesh && n.material) {
+                            n.receiveShadow = true;
+                            n.material.roughness = 0.8; 
+                            n.material.metalness = 0.1;
+                        }
+                    });
+                    seg.position.z = -i * MAP_SIZE;
+                    scene.add(seg);
+                    mapSegments.push(seg);
+                }
+                done();
+            });
+
+            gltfLoader.load(GIAN_URL, (gltf) => { gianPrototype = gltf.scene; gianPrototype.traverse(c=>{if(c.isMesh)c.castShadow=true;}); done(); });
+            gltfLoader.load(NOBITA_URL, (gltf) => { nobitaPrototype = gltf.scene; nobitaPrototype.traverse(c=>{if(c.isMesh)c.castShadow=true;}); done(); });
+
+            fbxLoader.load(DORAEMON_URL, (obj) => {
+                doraemon = obj;
+                doraemon.traverse(child => { if (child.isMesh) { child.castShadow = true; child.receiveShadow = true; } });
+                doraemon.scale.set(0.81, 0.81, 0.81);
+                doraemon.position.set(SPAWN_POS.x, SPAWN_POS.y, SPAWN_POS.z);
+                scene.add(doraemon);
+                mixer = new THREE.AnimationMixer(doraemon);
+                const runClip = stripRootMotion(obj.animations[0]);
+                runAction = mixer.clipAction(runClip);
+                
+                fbxLoader.load(DANCE_URL, (d) => { 
+                    const clip = stripRootMotion(d.animations[0]);
+                    danceAction = mixer.clipAction(clip).play(); 
+                    done(); 
+                });
+                fbxLoader.load(DEATH_URL, (d) => { 
+                    const clip = stripRootMotion(d.animations[0]);
+                    deathAction = mixer.clipAction(clip); 
+                    done(); 
+                });
+                fbxLoader.load(FLY_URL, (d) => { 
+                    const clip = stripRootMotion(d.animations[0]);
+                    flyAction = mixer.clipAction(clip); 
+                    done(); 
+                });
+                done();
+            });
+        }
+
+        function spawnObstacle() {
+            if (!gianPrototype || !nobitaPrototype || isPaused || isDictatorMode) return;
+            const isNobita = Math.random() > 0.6;
+            const enemy = isNobita ? nobitaPrototype.clone() : gianPrototype.clone();
+            enemy.userData = { type: isNobita ? 'nobita' : 'gian' };
+            if (isNobita) {
+                enemy.scale.set(0.4, 0.4, 0.4);
+                enemy.position.set((Math.floor(Math.random()*3)-1)*LANE_WIDTH, 1.0, -100);
+            } else {
+                enemy.scale.set(2.8, 2.8, 2.8);
+                enemy.position.set((Math.floor(Math.random()*3)-1)*LANE_WIDTH, 3, -100);
+            }
+            scene.add(enemy);
+            obstacles.push(enemy);
+        }
+
+        function spawnCoin() {
+            if (isPaused) return;
+            if (isDictatorMode) {
+                [-1, 0, 1].forEach(lane => {
+                    const group = createCoinMesh();
+                    group.position.set(lane * LANE_WIDTH, 2.5, -100);
+                    scene.add(group);
+                    coins.push(group);
+                });
+            } else {
+                const group = createCoinMesh();
+                group.position.set((Math.floor(Math.random()*3)-1)*LANE_WIDTH, 2.5, -100);
+                scene.add(group);
+                coins.push(group);
+            }
+        }
+
+        function createCoinMesh() {
+            const group = new THREE.Group();
+            const bun = new THREE.Mesh(new THREE.SphereGeometry(0.8, 24, 24), new THREE.MeshStandardMaterial({color: 0xe67e22, roughness: 0.5}));
+            bun.scale.set(1, 0.4, 1);
+            group.add(bun);
+            const filling = new THREE.Mesh(new THREE.CylinderGeometry(0.78, 0.78, 0.2, 24), new THREE.MeshStandardMaterial({color: 0x3d1c02}));
+            group.add(filling);
+            group.scale.set(1.4, 1.4, 1.4);
+            return group;
+        }
+
+        function handleKeyDown(e) {
+            if (e.code === 'Escape') togglePause();
+            if (!isRunning || isGameOver || isPaused) return;
+            if (e.code === 'KeyA' || e.code === 'ArrowLeft') targetX = Math.max(targetX - LANE_WIDTH, -LANE_WIDTH);
+            if (e.code === 'KeyD' || e.code === 'ArrowRight') targetX = Math.min(targetX + LANE_WIDTH, LANE_WIDTH);
+            if ((e.code === 'Space' || e.code === 'ArrowUp') && !isJumping && !isFlying) {
+                isJumping = true;
+                verticalVelocity = JUMP_FORCE;
+            }
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function shakeUI(elementId) {
+            const el = document.getElementById(elementId);
+            el.classList.remove('shake-trigger');
+            void el.offsetWidth;
+            el.classList.add('shake-trigger');
+        }
+
+        function triggerCameraShake(intensity = 0.4) { cameraShakeIntensity = intensity; }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const delta = clock.getDelta();
+            if (mixer && !isPaused) mixer.update(delta * (isSmall ? 1.5 : 1.0) * progressionMultiplier);
+
+            if (isRunning && !isGameOver && !isPaused) {
+                progressionMultiplier = Math.min(1 + (score / 20000), 3.0);
+                const move = BASE_RUN_SPEED * currentSpeedMultiplier * progressionMultiplier * delta;
+                score += move * 0.4;
+                document.getElementById('score-val').innerText = Math.floor(score);
+                
+                document.getElementById('btn-use-gadget').style.opacity = ownedGadgets.length > 0 ? "1" : "0.5";
+
+                if (isJumping) {
+                    verticalVelocity += GRAVITY * delta;
+                    doraemon.position.y += verticalVelocity * delta;
+                    const groundY = isSmall ? tinyYPos : SPAWN_POS.y;
+                    if (doraemon.position.y <= groundY) {
+                        doraemon.position.y = groundY;
+                        isJumping = false;
+                        verticalVelocity = 0;
+                    }
+                }
+
+                mapSegments.forEach(s => {
+                    s.position.z += move;
+                    if (s.position.z > MAP_SIZE) s.position.z -= MAP_SIZE * 3;
+                });
+
+                const spawnFreq = 1600 / (currentSpeedMultiplier * progressionMultiplier);
+                if (Date.now() - lastSpawnTime > spawnFreq) { spawnObstacle(); lastSpawnTime = Date.now(); }
+                
+                const coinSpawnInterval = isDictatorMode ? 200 : 700; 
+                if (Date.now() - lastCoinSpawnTime > coinSpawnInterval) { spawnCoin(); lastCoinSpawnTime = Date.now(); }
+
+                obstacles.forEach((o, i) => {
+                    o.position.z += move;
+                    const dx = Math.abs(doraemon.position.x - o.position.x);
+                    const dz = Math.abs(doraemon.position.z - o.position.z);
+                    const dy = doraemon.position.y - o.position.y;
+                    if (dx < 2.5 && dz < 2.0) {
+                        if (o.userData.type === 'nobita' ? dy < 2.5 : true) triggerGameOver();
+                    }
+                    if (o.position.z > 20) { scene.remove(o); obstacles.splice(i, 1); }
+                });
+
+                coins.forEach((c, i) => {
+                    c.position.z += move;
+                    c.rotation.y += delta * 2;
+                    const dx = Math.abs(doraemon.position.x - c.position.x);
+                    const dz = Math.abs(doraemon.position.z - c.position.z);
+                    const dy = Math.abs(doraemon.position.y - c.position.y);
+                    if (dx < 2.2 && dz < 2.2 && dy < 3.0) {
+                        totalDoracakes++;
+                        updateStatsUI();
+                        saveUserData();
+                        shakeUI('coin-container'); triggerCameraShake(0.35);
+                        scene.remove(c); coins.splice(i, 1);
+                    }
+                    if (c.position.z > 20) { scene.remove(c); coins.splice(i, 1); }
+                });
+
+                doraemon.position.x += (targetX - doraemon.position.x) * 0.15;
+                doraemon.position.z = SPAWN_POS.z;
+
+                if (cameraShakeIntensity > 0) {
+                    camera.position.x = baseCamPos.x + (Math.random() - 0.5) * cameraShakeIntensity;
+                    camera.position.y = baseCamPos.y + (Math.random() - 0.5) * cameraShakeIntensity;
+                    cameraShakeIntensity *= 0.9;
+                    if (cameraShakeIntensity < 0.01) { cameraShakeIntensity = 0; camera.position.copy(baseCamPos); }
+                }
+            }
+            renderer.render(scene, camera);
+        }
+        window.onload = init;
+    </script>
+</body>
+</html>
